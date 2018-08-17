@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/google/go-querystring/query"
@@ -84,7 +85,6 @@ func (s *Session) GetPlayer(id string, shard string, clbk func(PlayerResponse, e
 		if err != nil {
 			clbk(pr, err)
 		}
-		// TODO clean up included
 		clbk(pr, nil)
 	})
 	return s.GetQueueSize()
@@ -109,13 +109,36 @@ func (s *Session) GetMatch(id string, shard string, clbk func(MatchResponse, err
 		if err != nil {
 			clbk(mr, err)
 		}
-		// TODO Clean up included struct
+		for _, inc := range mr.Included {
+			var check map[string]string
+			json.Unmarshal(inc, &check)
+			switch check["type"] {
+			case "player":
+				var p MatchPlayer
+				json.Unmarshal(inc, &p)
+				mr.Players = append(mr.Players, p)
+			case "participant":
+				var p MatchParticipant
+				json.Unmarshal(inc, &p)
+				mr.Participants = append(mr.Participants, p)
+			case "asset":
+				var a MatchAsset
+				json.Unmarshal(inc, &a)
+				mr.Assets = append(mr.Assets, a)
+			case "roster":
+				var r MatchRoster
+				json.Unmarshal(inc, &r)
+				mr.Rosters = append(mr.Rosters, r)
+			}
+		}
 		clbk(mr, nil)
 	})
 	return s.GetQueueSize()
 }
 
-// GetMatches does stuff
+// GetMatches retrieves a list of match data and passes the MatchesResponse into the given callback.
+// Upon retrieval of data the callback passed in is executed. Additionally the size of the
+// poller buffer is returned.
 func (s *Session) GetMatches(options GetMatchesRequestOptions, shard string, clbk func(MatchesResponse, error)) (size int) {
 	v, _ := query.Values(options)
 	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s/%s/%s?%s", base, shards, shard, matches, v.Encode()), nil)
@@ -133,8 +156,80 @@ func (s *Session) GetMatches(options GetMatchesRequestOptions, shard string, clb
 		if err != nil {
 			clbk(mr, err)
 		}
-		// TODO Clean up included struct
+		for _, inc := range mr.Included {
+			var check map[string]string
+			json.Unmarshal(inc, &check)
+			switch check["type"] {
+			case "player":
+				var p MatchPlayer
+				json.Unmarshal(inc, &p)
+				mr.Players = append(mr.Players, p)
+			case "participant":
+				var p MatchParticipant
+				json.Unmarshal(inc, &p)
+				mr.Participants = append(mr.Participants, p)
+			case "asset":
+				var a MatchAsset
+				json.Unmarshal(inc, &a)
+				mr.Assets = append(mr.Assets, a)
+			case "roster":
+				var r MatchRoster
+				json.Unmarshal(inc, &r)
+				mr.Rosters = append(mr.Rosters, r)
+			}
+		}
 		clbk(mr, nil)
 	})
 	return s.GetQueueSize()
+}
+
+// GetTelemetry retrieves the telemetry data at a specified url and passes the TelemetryResponse into the given callback.
+// Upon retrieval of data the callback passed in is executed. Additionally the size of the
+// poller buffer is returned.
+func (s *Session) GetTelemetry(url string, clbk func(TelemetryResponse, string, error)) (size int) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return
+	}
+	req.Header.Set("Authorization", s.apiKey)
+	req.Header.Set("Accept", "application/vnd.api+json")
+	s.poller.Request(req, func(res *http.Response, err error) {
+		if err != nil {
+			clbk(TelemetryResponse{}, url, err)
+			return
+		}
+		var buffer bytes.Buffer
+		buffer.ReadFrom(res.Body)
+		t, err := parseTelemetry(buffer.Bytes())
+		clbk(t, url, err)
+	})
+	return s.GetQueueSize()
+}
+
+// ReadTelemetryFromFile parses json telemetry data from a given file
+// and returns a TelemetryResponse struct. It is more performant to cache
+// telemetry data for future use.
+func ReadTelemetryFromFile(path string) (tr TelemetryResponse, err error) {
+	var b []byte
+	b, err = ioutil.ReadFile(path)
+	if err != nil {
+		return
+	}
+	return parseTelemetry(b)
+}
+
+// parseTelemetry reads the telemetry event type from the json
+// and passes it to the unmarshaller
+func parseTelemetry(b []byte) (tr TelemetryResponse, err error) {
+	var v []json.RawMessage
+	json.Unmarshal(b, &v)
+	for _, bts := range v {
+		var eval map[string]interface{}
+		err = json.Unmarshal(bts, &eval)
+		if err != nil {
+			return
+		}
+		tr.unmarshalEvent(bts, eval["_T"].(string))
+	}
+	return
 }
