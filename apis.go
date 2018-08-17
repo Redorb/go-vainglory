@@ -3,18 +3,19 @@ package vainglory
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"net/url"
-	"strings"
+
+	"github.com/google/go-querystring/query"
 )
 
 const (
-	base    = "ttps://api.dc01.gamelockerapp.com" // base URL for making API calls
-	shards  = "/shards/"                          // shards path segment
-	matches = "/matches/"                         // matches end point
-	players = "/players"                          //players end point
-	status  = "/status"                           // status end point
-	seasons = "/seasons"                          // seasons end point
+	base    = "https://api.dc01.gamelockerapp.com" // base URL for making API calls
+	shards  = "shards"                             // shards path segment
+	matches = "matches"                            // matches end point
+	players = "players"                            // players end point
+	status  = "status"                             // status end point
+	seasons = "seasons"                            // seasons end point
 
 	// China Mobile China region
 	China = "cn"
@@ -49,7 +50,7 @@ func (s *Session) GetQueueSize() (size int) {
 // Upon retrieval of data the callback passed in is executed. Additionally the size of the
 // poller buffer is returned.
 func (s *Session) GetStatus(clbk func(StatusResponse, error)) (size int) {
-	req, _ := http.NewRequest("GET", base+status, nil)
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s", base, status), nil)
 	s.poller.Request(req, func(res *http.Response, err error) {
 		var sr StatusResponse
 		if err != nil {
@@ -64,31 +65,11 @@ func (s *Session) GetStatus(clbk func(StatusResponse, error)) (size int) {
 	return s.GetQueueSize()
 }
 
-// GetPlayer retrieves data for the specified player and passes the PlayerResponseData into the given callback.
+// GetPlayer retrieves the player data for a specified player id and passes the PlayerResponse into the given callback.
 // Upon retrieval of data the callback passed in is executed. Additionally the size of the
 // poller buffer is returned.
-func (s *Session) GetPlayer(id, shard string, clbk func(PlayerResponseData, error)) (size int) {
-	s.GetPlayers([]string{id}, shard, func(pr PlayerResponse, err error) {
-		clbk(pr.Data, err)
-	})
-	return s.GetQueueSize()
-}
-
-// GetPlayers retrieves data for the passed names and passes the PlayerResponse into the given callback.
-// Upon retrieval of data the callback passed in is executed. Additionally the size of the
-// poller buffer is returned.
-func (s *Session) GetPlayers(ids []string, shard string, clbk func(PlayerResponse, error)) (size int) {
-	return s.getPlayersByFilter(ids, shard, "playerIds", clbk)
-}
-
-func (s *Session) GetPlayersByName(names []string, shard string, clbk func(PlayerResponse, error)) (size int) {
-	return s.getPlayersByFilter(names, shard, "playerNames", clbk)
-}
-
-func (s *Session) getPlayersByFilter(keys []string, shard, filter string, clbk func(PlayerResponse, error)) (size int) {
-	query := strings.Replace(strings.Join(keys, ","), " ", "%20", -1)
-	u, _ := url.ParseRequestURI(base + shards + shard + players + "?filter[" + filter + "]=" + query)
-	req, _ := http.NewRequest("GET", u.String(), nil)
+func (s *Session) GetPlayer(id string, shard string, clbk func(PlayerResponse, error)) (size int) {
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s/%s/%s/%s", base, shards, shard, players, id), nil)
 	req.Header.Set("Authorization", s.apiKey)
 	req.Header.Set("Accept", "application/vnd.api+json")
 	s.poller.Request(req, func(res *http.Response, err error) {
@@ -100,7 +81,60 @@ func (s *Session) getPlayersByFilter(keys []string, shard, filter string, clbk f
 		var buffer bytes.Buffer
 		buffer.ReadFrom(res.Body)
 		err = json.Unmarshal(buffer.Bytes(), &pr)
-		clbk(pr, err)
+		if err != nil {
+			clbk(pr, err)
+		}
+		// TODO clean up included
+		clbk(pr, nil)
+	})
+	return s.GetQueueSize()
+}
+
+// GetMatch retrieves the match data for a specified match id and passes the MatchResponse into the given callback.
+// Upon retrieval of data the callback passed in is executed. Additionally the size of the
+// poller buffer is returned.
+func (s *Session) GetMatch(id string, shard string, clbk func(MatchResponse, error)) (size int) {
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s/%s/%s/%s", base, shards, shard, matches, id), nil)
+	req.Header.Set("Authorization", s.apiKey)
+	req.Header.Set("Accept", "application/vnd.api+json")
+	s.poller.Request(req, func(res *http.Response, err error) {
+		var mr MatchResponse
+		if err != nil {
+			clbk(mr, err)
+			return
+		}
+		var buffer bytes.Buffer
+		buffer.ReadFrom(res.Body)
+		err = json.Unmarshal(buffer.Bytes(), &mr)
+		if err != nil {
+			clbk(mr, err)
+		}
+		// TODO Clean up included struct
+		clbk(mr, nil)
+	})
+	return s.GetQueueSize()
+}
+
+// GetMatches does stuff
+func (s *Session) GetMatches(options GetMatchesRequestOptions, shard string, clbk func(MatchesResponse, error)) (size int) {
+	v, _ := query.Values(options)
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s/%s/%s?%s", base, shards, shard, matches, v.Encode()), nil)
+	req.Header.Set("Authorization", s.apiKey)
+	req.Header.Set("Accept", "application/vnd.api+json")
+	s.poller.Request(req, func(res *http.Response, err error) {
+		var mr MatchesResponse
+		if err != nil {
+			clbk(mr, err)
+			return
+		}
+		var buffer bytes.Buffer
+		buffer.ReadFrom(res.Body)
+		err = json.Unmarshal(buffer.Bytes(), &mr)
+		if err != nil {
+			clbk(mr, err)
+		}
+		// TODO Clean up included struct
+		clbk(mr, nil)
 	})
 	return s.GetQueueSize()
 }
