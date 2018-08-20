@@ -11,7 +11,6 @@ import (
 // Session is the main struct for pubgo
 type Session struct {
 	apiKey string  // developers api key, used to make calls
-	region string  // player region to use when requesting data from server
 	poller *poller // poller is responsible for executing the requests as well as maintaining rate limit queue
 }
 
@@ -19,7 +18,6 @@ type Session struct {
 func New(key string, rateLimit int) (s *Session, err error) {
 	s = &Session{
 		apiKey: key,
-		region: NorthAmerica,
 		poller: newPoller(&http.Client{Timeout: (20 * time.Second)}, rateLimit),
 	}
 	return
