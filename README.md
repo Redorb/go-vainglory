@@ -14,4 +14,4 @@ In the file you will need to add the following:
 >}
 
 ## dependencies
-Though this client only has one [dependency](https://github.com/google/go-querystring) the project uses the new go module system. More information on them can be found [here](https://github.com/golang/go/wiki/Modules).
+Though this client only has one [dependency](https://github.com/google/go-querystring) the project uses the new go module system. More information on go modules can be found [here](https://github.com/golang/go/wiki/Modules).
