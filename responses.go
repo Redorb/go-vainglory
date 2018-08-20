@@ -211,10 +211,10 @@ type MatchDataRelationships struct {
 }
 
 type PlayerResponse struct {
-	Data PlayerResponseData `json:"data"`
+	Data PlayerData `json:"data"`
 }
 
-type PlayerResponseData struct {
+type PlayerData struct {
 	typeIDPair
 	Attributes PlayerAttributes `json:"attributes"`
 }
@@ -225,6 +225,13 @@ type PlayerAttributes struct {
 	ShardID      string      `json:"shardId"`
 	Stats        PlayerStats `json:"stats"`
 	TitleID      string      `json:"titleID"`
+}
+
+type PlayersResponse struct {
+	Data  []PlayerData
+	Links struct {
+		Self string `json:"self"`
+	} `json:"links"`
 }
 
 // TelemetryResponse is the response payload for the telemetry end point

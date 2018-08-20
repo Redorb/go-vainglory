@@ -183,6 +183,31 @@ func (s *Session) GetMatches(options GetMatchesRequestOptions, shard string, clb
 	return s.GetQueueSize()
 }
 
+// GetPlayers retrieves a list of plater data and passes the PlayersResponse into the given callback.
+// Upon retrieval of data the callback passed in is executed. Additionally the size of the
+// poller buffer is returned.
+func (s *Session) GetPlayers(options GetPlayersRequestOptions, shard string, clbk func(PlayersResponse, error)) (size int) {
+	v, _ := query.Values(options)
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s/%s/%s?%s", base, shards, shard, players, v.Encode()), nil)
+	req.Header.Set("Authorization", s.apiKey)
+	req.Header.Set("Accept", "application/vnd.api+json")
+	s.poller.Request(req, func(res *http.Response, err error) {
+		var pr PlayersResponse
+		if err != nil {
+			clbk(pr, err)
+			return
+		}
+		var buffer bytes.Buffer
+		buffer.ReadFrom(res.Body)
+		err = json.Unmarshal(buffer.Bytes(), &pr)
+		if err != nil {
+			clbk(pr, err)
+		}
+		clbk(pr, nil)
+	})
+	return s.GetQueueSize()
+}
+
 // GetTelemetry retrieves the telemetry data at a specified url and passes the TelemetryResponse into the given callback.
 // Upon retrieval of data the callback passed in is executed. Additionally the size of the
 // poller buffer is returned.

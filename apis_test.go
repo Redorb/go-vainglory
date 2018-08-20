@@ -52,6 +52,28 @@ func TestGetPlayer(t *testing.T) {
 	}
 }
 
+func TestGetPlayers(t *testing.T) {
+	options := GetPlayersRequestOptions{
+		PlayerNamesFilter: testPlayers,
+	}
+
+	size := session.GetPlayers(options, NorthAmerica, func(pr PlayersResponse, err error) {
+		if err != nil {
+			t.Errorf("Error getting players from API: %s", err.Error())
+		}
+		if !strings.Contains(pr.Links.Self, testPlayers[0]) {
+			t.Errorf(
+				"Expected request url %s to contain player name %s, but not present",
+				pr.Links.Self,
+				testPlayers[0],
+			)
+		}
+	})
+	if size != 0 {
+		t.Errorf("expected a queue size of 0 but received %d", size)
+	}
+}
+
 func TestGetMatch(t *testing.T) {
 	size := session.GetMatch(testMatchIDs[0], SoutheastAsia, func(mr MatchResponse, err error) {
 		if mr.GetMatchID() != testMatchIDs[0] {
