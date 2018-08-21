@@ -57,7 +57,7 @@ type MatchParticipant struct {
 		Stats   ParticipantStats `json:"stats"`
 	} `json:"attributes"`
 	Relationships struct {
-		Player MatchDataRelationships `json:"player"`
+		Player MatchDataRelationship `json:"player"`
 	} `json:"relationships"`
 }
 
@@ -66,7 +66,7 @@ type ParticipantStats struct {
 	CrystalMineCaptures  int            `json:"crystalMineCaptures"`
 	Deaths               int            `json:"deaths"`
 	Farm                 int            `json:"farm"`
-	FirstAfkTime         int            `json:"firstAfkTime"`
+	FirstAfkTime         float64        `json:"firstAfkTime"`
 	Gold                 float64        `json:"gold"`
 	GoldMineCaptures     int            `json:"goldMineCaptures"`
 	ItemGrants           map[string]int `json:"itemGrants"`
@@ -208,6 +208,12 @@ type MatchRelationships struct {
 
 type MatchDataRelationships struct {
 	Data []typeIDPair `json:"data"`
+}
+
+type MatchDataRelationship struct {
+	Data struct {
+		typeIDPair
+	} `json:"data"`
 }
 
 type PlayerResponse struct {
