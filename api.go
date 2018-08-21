@@ -72,14 +72,21 @@ func (c *Client) newRequest(method, path string, body interface{}, options inter
 	return req, nil
 }
 
-func (c *Client) do(req *http.Request, v interface{}) (*http.Response, error) {
+func (c *Client) do(req *http.Request, v interface{}) error {
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
-	err = json.NewDecoder(resp.Body).Decode(v)
-	return resp, err
+	var buffer bytes.Buffer
+	buffer.ReadFrom(resp.Body)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return json.Unmarshal(buffer.Bytes(), v)
+	default:
+		return newRestError(req, resp, buffer.Bytes())
+	}
 }
 
 // GetStatus retrieves status data from the PUBG servers and passes back a StatusResponse.
@@ -89,7 +96,7 @@ func (c *Client) GetStatus() (*StatusResponse, error) {
 		return nil, err
 	}
 	var response StatusResponse
-	_, err = c.do(req, &response)
+	err = c.do(req, &response)
 	return &response, err
 }
 
@@ -101,7 +108,7 @@ func (c *Client) GetPlayer(id string, shard string) (*PlayerResponse, error) {
 	}
 
 	var response PlayerResponse
-	_, err = c.do(req, &response)
+	err = c.do(req, &response)
 	return &response, err
 }
 
@@ -113,7 +120,7 @@ func (c *Client) GetMatch(id string, shard string) (*MatchResponse, error) {
 	}
 
 	var response MatchResponse
-	_, err = c.do(req, &response)
+	err = c.do(req, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +163,7 @@ func (c *Client) GetMatches(options GetMatchesRequestOptions, shard string) (*Ma
 	}
 
 	var response MatchesResponse
-	_, err = c.do(req, &response)
+	err = c.do(req, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +206,7 @@ func (c *Client) GetPlayers(options GetPlayersRequestOptions, shard string) (*Pl
 	}
 
 	var response PlayersResponse
-	_, err = c.do(req, &response)
+	err = c.do(req, &response)
 	return &response, err
 }
 

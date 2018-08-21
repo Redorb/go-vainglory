@@ -81,6 +81,13 @@ func TestGetMatch(t *testing.T) {
 	}
 }
 
+func TestGetMatchNonexistant(t *testing.T) {
+	_, err := client.GetMatch("1213141", SoutheastAsia)
+	if err == nil {
+		t.Error("Expected error from api")
+	}
+}
+
 func TestGetMatches(t *testing.T) {
 	currentTime := time.Now()
 	options := GetMatchesRequestOptions{
