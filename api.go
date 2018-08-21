@@ -204,7 +204,7 @@ func (c *Client) GetPlayers(options GetPlayersRequestOptions, shard string) (*Pl
 }
 
 // GetTelemetry retrieves the telemetry data at a specified url and passes back a TelemetryResponse.
-func (c *Client) GetTelemetry(url string, clbk func(TelemetryResponse, string, error)) (*TelemetryResponse, error) {
+func (c *Client) GetTelemetry(url string) (*TelemetryResponse, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
