@@ -113,8 +113,8 @@ func (c *Client) GetPlayer(id string, shardID string) (*PlayerResponse, error) {
 }
 
 // GetMatch retrieves the match data for a specified match id and passes back a MatchResponse.
-func (c *Client) GetMatch(id string, shardID string) (*MatchResponse, error) {
-	req, err := c.newRequest("GET", fmt.Sprintf("%s/%s/%s/%s", shards, shardID, matches, id), nil, nil)
+func (c *Client) GetMatch(matchID string, shardID string) (*MatchResponse, error) {
+	req, err := c.newRequest("GET", fmt.Sprintf("%s/%s/%s/%s", shards, shardID, matches, matchID), nil, nil)
 	if err != nil {
 		return nil, err
 	}
